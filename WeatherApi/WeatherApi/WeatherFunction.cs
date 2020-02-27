@@ -3,25 +3,33 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
 using Microsoft.Extensions.Logging;
+
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
+
 using WeatherApi.AzureWrapper;
+using WeatherApi.FileReader;
 using WeatherApi.Model;
 
 namespace WeatherApi
 {
     public class WeatherFunction
     {
-        readonly IBlobContainerWrapper blobContainer;
         readonly ILogger<WeatherFunction> logger;
+        readonly IBlobContainerWrapper blobContainer;
+        readonly ICsvReader<Sensor> sensorCsvReader;
+        readonly ICsvReader<Reading> readingCsvReader;
         public WeatherFunction(
             ILogger<WeatherFunction> logger,
-            IBlobContainerWrapper blobContainer)
+            IBlobContainerWrapper blobContainer,
+            ICsvReader<Sensor> sensorCsvReader,
+            ICsvReader<Reading> readingCsvReader)
         {
+            this.readingCsvReader = readingCsvReader;
+            this.sensorCsvReader = sensorCsvReader;
             this.logger = logger;
             this.blobContainer = blobContainer;
         }
@@ -44,19 +52,12 @@ namespace WeatherApi
             var measurements = new List<Measurement>();
             foreach (var sensor in selectedSensors)
             {
-                var readings = new List<Reading>();
+                List<Reading> readings;
                 var temporaryFileName = $"{sensor.Name}/{sensor.SensorType}/{date.Date.ToString("yyyy-MM-dd")}.csv";
                 if (await this.blobContainer.Exists(temporaryFileName))
                 {
                     var temporaryBlobFile = await this.blobContainer.DownloadBlob(temporaryFileName);
-                    using (var reader = new StreamReader(temporaryBlobFile))
-                    {
-                        while (reader.Peek() >= 0)
-                        {
-                            var values = reader.ReadLine().Split(";");
-                            readings.Add(new Reading { Time = values[0], Value = values[1] });
-                        }
-                    }
+                    readings = this.readingCsvReader.ReadFile(temporaryBlobFile);
                 }
                 else
                 {
@@ -76,14 +77,7 @@ namespace WeatherApi
                             {
                                 using (var selectedDayStream = selectedDay.Open())
                                 {
-                                    using (var reader = new StreamReader(selectedDayStream))
-                                    {
-                                        while (reader.Peek() >= 0)
-                                        {
-                                            var values = reader.ReadLine().Split(";");
-                                            readings.Add(new Reading { Time = values[0], Value = values[1] });
-                                        }
-                                    }
+                                    readings = this.readingCsvReader.ReadFile(selectedDayStream);
                                 }
                             }
                         }
@@ -103,17 +97,7 @@ namespace WeatherApi
         private async Task<List<Sensor>> GetMetadata()
         {
             var metadataFile = await this.blobContainer.DownloadBlob(@"metadata.csv");
-            var metadata = new List<Sensor>();
-            using (var reader = new StreamReader(metadataFile))
-            {
-                while (reader.Peek() >= 0)
-                {
-                    var values = reader.ReadLine().Split(";");
-                    metadata.Add(new Sensor { Name = values[0], SensorType= values[1] });
-                }
-            }
-
-            return metadata;
+            return this.sensorCsvReader.ReadFile(metadataFile);
         }
     }
 }
