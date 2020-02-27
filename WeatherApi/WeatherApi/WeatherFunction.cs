@@ -1,4 +1,3 @@
-using Azure.Storage.Blobs;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
@@ -10,12 +9,19 @@ using System.IO;
 using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
+using WeatherApi.AzureWrapper;
 using WeatherApi.Model;
 
 namespace WeatherApi
 {
     public class WeatherFunction
     {
+        readonly IBlobContainerWrapper blobContainer;
+        public WeatherFunction(IBlobContainerWrapper blobContainer)
+        {
+            this.blobContainer = blobContainer;
+        }
+        
         [FunctionName("GetData")]
         public async Task<IActionResult> GetData(
             ILogger log,
@@ -31,18 +37,16 @@ namespace WeatherApi
             {
                 return new BadRequestObjectResult("Given sensor does not exist.");
             }
-            var blobServiceClient = new BlobServiceClient(Environment.GetEnvironmentVariable("StorageConnectionAppSetting"));
-            var blobContainerClient = blobServiceClient.GetBlobContainerClient(@"iotbackend");
-
+            
             var measurements = new List<Measurement>();
             foreach (var sensor in selectedSensors)
             {
                 var readings = new List<Reading>();
-                var temporaryBlob = blobContainerClient.GetBlobClient($"{sensor.Name}/{sensor.SensorType}/{date.Date.ToString("yyyy-MM-dd")}.csv");
-                if (await temporaryBlob.ExistsAsync())
+                var temporaryFileName = $"{sensor.Name}/{sensor.SensorType}/{date.Date.ToString("yyyy-MM-dd")}.csv";
+                if (await this.blobContainer.Exists(temporaryFileName))
                 {
-                    var temporaryBlobFile = await temporaryBlob.DownloadAsync();
-                    using (var reader = new StreamReader(temporaryBlobFile.Value.Content))
+                    var temporaryBlobFile = await this.blobContainer.DownloadBlob(temporaryFileName);
+                    using (var reader = new StreamReader(temporaryBlobFile))
                     {
                         while (reader.Peek() >= 0)
                         {
@@ -53,12 +57,12 @@ namespace WeatherApi
                 }
                 else
                 {
-                    var historicalBlob = blobContainerClient.GetBlobClient($"{sensor.Name}/{sensor.SensorType}/historical.zip");
+                    var historicalFileName = $"{sensor.Name}/{sensor.SensorType}/historical.zip";
 
-                    if (await historicalBlob.ExistsAsync())
+                    if (await this.blobContainer.Exists(historicalFileName))
                     {
-                        var historicalBlobFile = await historicalBlob.DownloadAsync();
-                        using (var zip = new ZipArchive(historicalBlobFile.Value.Content))
+                        var historicalBlobFile = await this.blobContainer.DownloadBlob(historicalFileName);
+                        using (var zip = new ZipArchive(historicalBlobFile))
                         {
                             var selectedDay = zip.Entries.FirstOrDefault(x => x.Name == $"{date.Date.ToString("yyyy-MM-dd")}.csv");
                             if (selectedDay == null)
@@ -95,12 +99,9 @@ namespace WeatherApi
 
         private async Task<List<Sensor>> GetMetadata()
         {
-            var blobServiceClient = new BlobServiceClient(Environment.GetEnvironmentVariable("StorageConnectionAppSetting"));
-            var blobContainerClient = blobServiceClient.GetBlobContainerClient(@"iotbackend");
-            var blobClient = blobContainerClient.GetBlobClient(@"metadata.csv");
-            var metadataFile = await blobClient.DownloadAsync();
+            var metadataFile = await this.blobContainer.DownloadBlob(@"metadata.csv");
             var metadata = new List<Sensor>();
-            using (var reader = new StreamReader(metadataFile.Value.Content))
+            using (var reader = new StreamReader(metadataFile))
             {
                 while (reader.Peek() >= 0)
                 {
