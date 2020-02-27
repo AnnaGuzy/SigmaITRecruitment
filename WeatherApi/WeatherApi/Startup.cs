@@ -10,6 +10,7 @@ namespace WeatherApi
     {
         public override void Configure(IFunctionsHostBuilder builder)
         {
+            builder.Services.AddLogging();
             builder.Services.AddTransient<IBlobContainerWrapper>(x => new BlobContainerWrapper(SettingsProvider.WeatherContainer));
         }
     }

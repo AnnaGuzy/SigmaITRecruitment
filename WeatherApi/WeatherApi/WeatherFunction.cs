@@ -17,20 +17,23 @@ namespace WeatherApi
     public class WeatherFunction
     {
         readonly IBlobContainerWrapper blobContainer;
-        public WeatherFunction(IBlobContainerWrapper blobContainer)
+        readonly ILogger<WeatherFunction> logger;
+        public WeatherFunction(
+            ILogger<WeatherFunction> logger,
+            IBlobContainerWrapper blobContainer)
         {
+            this.logger = logger;
             this.blobContainer = blobContainer;
         }
         
         [FunctionName("GetData")]
         public async Task<IActionResult> GetData(
-            ILogger log,
             [HttpTrigger(AuthorizationLevel.Anonymous, "get", Route = "devices/{testdevice}/{date:datetime}/{sensorType?}")] HttpRequest req,
             string testdevice,
             DateTime date,
             string sensorType)
         {
-            log.LogInformation("C# HTTP trigger function processed a request.");
+            this.logger.LogInformation("C# HTTP trigger function processed a request.");
             var metadata = await this.GetMetadata();
             var selectedSensors = metadata.Where(x => string.Equals(x.Name, testdevice, StringComparison.OrdinalIgnoreCase) && (string.Equals(x.SensorType, sensorType, StringComparison.OrdinalIgnoreCase) || sensorType == null)).ToList();
             if(selectedSensors.Any() == false)
