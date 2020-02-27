@@ -22,12 +22,16 @@ namespace WeatherApi
         readonly IBlobContainerWrapper blobContainer;
         readonly ICsvReader<Sensor> sensorCsvReader;
         readonly ICsvReader<Reading> readingCsvReader;
+        readonly IFileNameProvider fileNameProvider;
+
         public WeatherFunction(
             ILogger<WeatherFunction> logger,
             IBlobContainerWrapper blobContainer,
             ICsvReader<Sensor> sensorCsvReader,
-            ICsvReader<Reading> readingCsvReader)
+            ICsvReader<Reading> readingCsvReader,
+            IFileNameProvider fileNameProvider)
         {
+            this.fileNameProvider = fileNameProvider;
             this.readingCsvReader = readingCsvReader;
             this.sensorCsvReader = sensorCsvReader;
             this.logger = logger;
@@ -43,7 +47,7 @@ namespace WeatherApi
         {
             this.logger.LogInformation("C# HTTP trigger function processed a request.");
             var metadata = await this.GetMetadata();
-            var selectedSensors = metadata.Where(x => string.Equals(x.Name, testdevice, StringComparison.OrdinalIgnoreCase) && (string.Equals(x.SensorType, sensorType, StringComparison.OrdinalIgnoreCase) || sensorType == null)).ToList();
+            var selectedSensors = metadata.Where(x => x.Equals(testdevice, sensorType)).ToList();
             if(selectedSensors.Any() == false)
             {
                 return new BadRequestObjectResult("Given sensor does not exist.");
@@ -53,22 +57,23 @@ namespace WeatherApi
             foreach (var sensor in selectedSensors)
             {
                 List<Reading> readings;
-                var temporaryFileName = $"{sensor.Name}/{sensor.SensorType}/{date.Date.ToString("yyyy-MM-dd")}.csv";
-                if (await this.blobContainer.Exists(temporaryFileName))
+                var temporaryFileName = this.fileNameProvider.GetTemporaryFileName(sensor, date);
+                if (await this.blobContainer.Exists(this.fileNameProvider.GetTemporaryFileName(sensor, date)))
                 {
                     var temporaryBlobFile = await this.blobContainer.DownloadBlob(temporaryFileName);
                     readings = this.readingCsvReader.ReadFile(temporaryBlobFile);
                 }
                 else
                 {
-                    var historicalFileName = $"{sensor.Name}/{sensor.SensorType}/historical.zip";
+                    var historicalFileName = this.fileNameProvider.GetHistoricalArchiveName(sensor);
 
                     if (await this.blobContainer.Exists(historicalFileName))
                     {
                         var historicalBlobFile = await this.blobContainer.DownloadBlob(historicalFileName);
                         using (var zip = new ZipArchive(historicalBlobFile))
                         {
-                            var selectedDay = zip.Entries.FirstOrDefault(x => x.Name == $"{date.Date.ToString("yyyy-MM-dd")}.csv");
+                            var selectedFileName = this.fileNameProvider.GetHistoricalFileName(date);
+                            var selectedDay = zip.Entries.FirstOrDefault(x => x.Name == selectedFileName);
                             if (selectedDay == null)
                             {
                                 return new BadRequestObjectResult("There are no measurements in selected day");
@@ -96,7 +101,7 @@ namespace WeatherApi
 
         private async Task<List<Sensor>> GetMetadata()
         {
-            var metadataFile = await this.blobContainer.DownloadBlob(@"metadata.csv");
+            var metadataFile = await this.blobContainer.DownloadBlob(this.fileNameProvider.GetMetadataFileName());
             return this.sensorCsvReader.ReadFile(metadataFile);
         }
     }

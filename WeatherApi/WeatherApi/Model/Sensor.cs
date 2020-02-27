@@ -1,4 +1,5 @@
-﻿using WeatherApi.FileReader;
+﻿using System;
+using WeatherApi.FileReader;
 
 namespace WeatherApi.Model
 {
@@ -11,6 +12,12 @@ namespace WeatherApi.Model
         {
             this.Name = values[0];
             this.SensorType = values[1];
+        }
+
+        public bool Equals(string name, string sensorType)
+        {
+            return string.Equals(this.Name, name, StringComparison.OrdinalIgnoreCase)
+                && (sensorType == null || string.Equals(this.SensorType, sensorType, StringComparison.OrdinalIgnoreCase));
         }
     }
 }

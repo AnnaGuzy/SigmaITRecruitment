@@ -14,6 +14,7 @@ namespace WeatherApi
             builder.Services.AddLogging();
             builder.Services.AddTransient<IBlobContainerWrapper>(x => new BlobContainerWrapper(SettingsProvider.WeatherContainer));
             builder.Services.AddSingleton(typeof(ICsvReader<>), typeof(CsvReader<>));
+            builder.Services.AddSingleton<IFileNameProvider, FileNameProvider>();
         }
     }
 }
