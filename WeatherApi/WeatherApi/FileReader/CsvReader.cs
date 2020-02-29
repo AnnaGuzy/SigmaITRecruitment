@@ -1,5 +1,6 @@
 ﻿using System.Collections.Generic;
 using System.IO;
+using WeatherApi.Settings;
 
 namespace WeatherApi.FileReader
 {
@@ -7,9 +8,9 @@ namespace WeatherApi.FileReader
         where T: IFromCsv, new()
     {
         readonly string delimiter;
-        public CsvReader(string delimiter = ";")
+        public CsvReader(ISettingsProvider settingsProvider)
         {
-            this.delimiter = delimiter;
+            this.delimiter = settingsProvider.CsvDelimiter;
         }
 
         public List<T> ReadFile(Stream source)

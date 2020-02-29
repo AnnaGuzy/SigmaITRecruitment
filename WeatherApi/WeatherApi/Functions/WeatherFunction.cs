@@ -2,40 +2,22 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.Http;
-using Microsoft.Extensions.Logging;
 
 using System;
-using System.Collections.Generic;
-using System.IO.Compression;
 using System.Linq;
 using System.Threading.Tasks;
 
-using WeatherApi.AzureWrapper;
-using WeatherApi.FileReader;
-using WeatherApi.Model;
+using WeatherApi.DataAccess;
 
 namespace WheatherApi.Functions
 {
     public class WeatherFunction
     {
-        readonly ILogger<WeatherFunction> logger;
-        readonly IBlobContainerWrapper blobContainer;
-        readonly ICsvReader<Sensor> sensorCsvReader;
-        readonly ICsvReader<Reading> readingCsvReader;
-        readonly IFileNameProvider fileNameProvider;
+        readonly IWeatherDataProvider weatherDataProvider;
 
-        public WeatherFunction(
-            ILogger<WeatherFunction> logger,
-            IBlobContainerWrapper blobContainer,
-            ICsvReader<Sensor> sensorCsvReader,
-            ICsvReader<Reading> readingCsvReader,
-            IFileNameProvider fileNameProvider)
+        public WeatherFunction(IWeatherDataProvider weatherDataProvider)
         {
-            this.fileNameProvider = fileNameProvider;
-            this.readingCsvReader = readingCsvReader;
-            this.sensorCsvReader = sensorCsvReader;
-            this.logger = logger;
-            this.blobContainer = blobContainer;
+            this.weatherDataProvider = weatherDataProvider;
         }
         
         [FunctionName("GetData")]
@@ -45,64 +27,22 @@ namespace WheatherApi.Functions
             DateTime date,
             string sensorType)
         {
-            this.logger.LogInformation("C# HTTP trigger function processed a request.");
-            var metadata = await this.GetMetadata();
-            var selectedSensors = metadata.Where(x => x.Equals(testdevice, sensorType)).ToList();
-            if(selectedSensors.Any() == false)
+            var sensors = await this.weatherDataProvider.GetSensors(testdevice, sensorType);
+            if(sensors.Any() == false)
             {
                 return new BadRequestObjectResult("Given sensor does not exist.");
             }
-            
-            var measurements = new List<Measurement>();
-            foreach (var sensor in selectedSensors)
-            {
-                List<Reading> readings;
-                var temporaryFileName = this.fileNameProvider.GetTemporaryFileName(sensor, date);
-                if (await this.blobContainer.Exists(this.fileNameProvider.GetTemporaryFileName(sensor, date)))
-                {
-                    var temporaryBlobFile = await this.blobContainer.DownloadBlob(temporaryFileName);
-                    readings = this.readingCsvReader.ReadFile(temporaryBlobFile);
-                }
-                else
-                {
-                    var historicalFileName = this.fileNameProvider.GetHistoricalArchiveName(sensor);
 
-                    if (await this.blobContainer.Exists(historicalFileName))
-                    {
-                        var historicalBlobFile = await this.blobContainer.DownloadBlob(historicalFileName);
-                        using (var zip = new ZipArchive(historicalBlobFile))
-                        {
-                            var selectedFileName = this.fileNameProvider.GetHistoricalFileName(date);
-                            var selectedDay = zip.Entries.FirstOrDefault(x => x.Name == selectedFileName);
-                            if (selectedDay == null)
-                            {
-                                return new BadRequestObjectResult("There are no measurements in selected day");
-                            }
-                            else
-                            {
-                                using (var selectedDayStream = selectedDay.Open())
-                                {
-                                    readings = this.readingCsvReader.ReadFile(selectedDayStream);
-                                }
-                            }
-                        }
-                    }
-                    else
-                    {
-                        return new BadRequestObjectResult("Given sensor does not exist.");
-                    }
-                }
+            var measurements = await Task.WhenAll(
+                sensors
+                .Select(x => this.weatherDataProvider.GetMeasurement(x, date))
+                .ToList());
 
-                measurements.Add(new Measurement { Readings = readings, Sensor = sensor });
-            }
+            var measurementsWithReadings = measurements.Where(x => x.Readings != null && x.Readings.Any()).ToList();
 
-            return new OkObjectResult(measurements);
-        }
-
-        private async Task<List<Sensor>> GetMetadata()
-        {
-            var metadataFile = await this.blobContainer.DownloadBlob(this.fileNameProvider.GetMetadataFileName());
-            return this.sensorCsvReader.ReadFile(metadataFile);
+            return measurementsWithReadings.Any()
+                ? (IActionResult)new OkObjectResult(measurementsWithReadings)
+                : new BadRequestObjectResult($"There were no data collected on {date.ToShortDateString()}.");
         }
     }
 }

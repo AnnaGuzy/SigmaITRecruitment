@@ -1,7 +1,9 @@
 ﻿using Azure.Storage.Blobs;
-using System;
+
 using System.IO;
 using System.Threading.Tasks;
+
+using WeatherApi.Settings;
 
 namespace WeatherApi.AzureWrapper
 {
@@ -9,17 +11,19 @@ namespace WeatherApi.AzureWrapper
     {
         private readonly BlobContainerClient blobContainerClient;
 
-        public BlobContainerWrapper(string containerName)
+        public BlobContainerWrapper(ISettingsProvider settingsProvider)
         {
-            var blobServiceClient = new BlobServiceClient(SettingsProvider.StorageConnectionAppSetting);
-            this.blobContainerClient = blobServiceClient.GetBlobContainerClient(containerName);
+            var blobServiceClient = new BlobServiceClient(settingsProvider.StorageConnectionAppSetting);
+            this.blobContainerClient = blobServiceClient.GetBlobContainerClient(settingsProvider.ContainerName);
         }
 
         public async Task<Stream> DownloadBlob(string blobName)
         {
-            var blobClient = blobContainerClient.GetBlobClient(blobName);
+            var blobClient = this.blobContainerClient.GetBlobClient(blobName);
             var file = await blobClient.DownloadAsync();
-            return file.Value.Content;
+            var memoryStream = new MemoryStream();
+            await file.Value.Content.CopyToAsync(memoryStream);
+            return memoryStream;
         }
 
         public async Task<bool> Exists(string blobName)

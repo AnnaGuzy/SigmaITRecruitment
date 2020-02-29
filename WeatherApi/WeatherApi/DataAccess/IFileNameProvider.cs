@@ -1,7 +1,7 @@
 ﻿using System;
 using WeatherApi.Model;
 
-namespace WeatherApi.FileReader
+namespace WeatherApi.DataAccess
 {
     public interface IFileNameProvider
     {
