@@ -73,7 +73,7 @@
 
             await using var historicalBlobFile = await this.blobContainer.DownloadBlob(historicalFileName);
             var selectedFileName = this.fileNameProvider.GetHistoricalFileName(date);
-            await using var selectedFile = this.zipReader.UnzipFile(historicalBlobFile, selectedFileName);
+            await using var selectedFile = await this.zipReader.UnzipFile(historicalBlobFile, selectedFileName);
             return selectedFile != null ? this.readingCsvReader.ReadFile(selectedFile) : null;
         }
     }

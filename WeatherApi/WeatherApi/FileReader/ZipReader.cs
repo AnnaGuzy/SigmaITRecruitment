@@ -3,10 +3,11 @@
     using System.IO;
     using System.IO.Compression;
     using System.Linq;
+    using System.Threading.Tasks;
 
     public class ZipReader : IZipReader
     {
-        public Stream UnzipFile(Stream archive, string fileName)
+        public async Task<Stream> UnzipFile(Stream archive, string fileName)
         {
             using var zip = new ZipArchive(archive);
             var selectedDay = zip.Entries.FirstOrDefault(x => x.Name == fileName);
@@ -16,7 +17,7 @@
             }
 
             var memoryStream = new MemoryStream();
-            selectedDay.Open().CopyToAsync(memoryStream);
+            await selectedDay.Open().CopyToAsync(memoryStream);
             memoryStream.Position = 0;
             return memoryStream;
         }
