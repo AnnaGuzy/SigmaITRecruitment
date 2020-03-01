@@ -7,7 +7,7 @@ namespace WeatherApi.FileReader
     public class CsvReader<T> : ICsvReader<T>
         where T: IFromCsv, new()
     {
-        readonly string delimiter;
+        private readonly string delimiter;
         public CsvReader(ISettingsProvider settingsProvider)
         {
             this.delimiter = settingsProvider.CsvDelimiter;

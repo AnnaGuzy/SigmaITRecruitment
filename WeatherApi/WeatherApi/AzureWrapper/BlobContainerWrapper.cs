@@ -23,12 +23,13 @@ namespace WeatherApi.AzureWrapper
             var file = await blobClient.DownloadAsync();
             var memoryStream = new MemoryStream();
             await file.Value.Content.CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
             return memoryStream;
         }
 
         public async Task<bool> Exists(string blobName)
         {
-            var blobClient = blobContainerClient.GetBlobClient(blobName);
+            var blobClient = this.blobContainerClient.GetBlobClient(blobName);
             var exists = await blobClient.ExistsAsync();
             return exists.Value;
         }

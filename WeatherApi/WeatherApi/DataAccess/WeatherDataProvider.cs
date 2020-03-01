@@ -10,11 +10,12 @@ namespace WeatherApi.DataAccess
 {
     public class WeatherDataProvider : IWeatherDataProvider
     {
-        readonly IBlobContainerWrapper blobContainer;
-        readonly ICsvReader<Sensor> sensorCsvReader;
-        readonly ICsvReader<Reading> readingCsvReader;
-        readonly IFileNameProvider fileNameProvider;
-        readonly IZipReader zipReader;
+        private readonly IBlobContainerWrapper blobContainer;
+        private readonly ICsvReader<Sensor> sensorCsvReader;
+        private readonly ICsvReader<Reading> readingCsvReader;
+        private readonly IFileNameProvider fileNameProvider;
+        private readonly IZipReader zipReader;
+
         public WeatherDataProvider(
             IBlobContainerWrapper blobContainer,
             ICsvReader<Sensor> sensorCsvReader,
@@ -29,11 +30,11 @@ namespace WeatherApi.DataAccess
             this.blobContainer = blobContainer;
         }
 
-        public async Task<List<Sensor>> GetSensors(string testdevice, string sensorType)
+        public async Task<List<Sensor>> GetSensors(string testDevice, string sensorType)
         {
-            using var metadataFile = await this.blobContainer.DownloadBlob(this.fileNameProvider.GetMetadataFileName());
+            await using var metadataFile = await this.blobContainer.DownloadBlob(this.fileNameProvider.GetMetadataFileName());
             var metadata = this.sensorCsvReader.ReadFile(metadataFile);
-            return metadata.Where(x => x.Equals(testdevice, sensorType)).ToList();
+            return metadata.Where(x => x.Equals(testDevice, sensorType)).ToList();
         }
 
         public async Task<Measurement> GetMeasurement(Sensor sensor, DateTime date)
@@ -50,31 +51,28 @@ namespace WeatherApi.DataAccess
         private async Task<List<Reading>> TryGetReadingsFromTemporary(Sensor sensor, DateTime date)
         {
             var temporaryFileName = this.fileNameProvider.GetTemporaryFileName(sensor, date);
-            if (await this.blobContainer.Exists(temporaryFileName))
+            if (!await this.blobContainer.Exists(temporaryFileName))
             {
-                using var temporaryBlobFile = await this.blobContainer.DownloadBlob(temporaryFileName);
-                return this.readingCsvReader.ReadFile(temporaryBlobFile);
+                return null;
             }
 
-            return null;
+            await using var temporaryBlobFile = await this.blobContainer.DownloadBlob(temporaryFileName);
+            return this.readingCsvReader.ReadFile(temporaryBlobFile);
         }
 
         private async Task<List<Reading>> GetReadingsFromHistorical(Sensor sensor, DateTime date)
         {
             var historicalFileName = this.fileNameProvider.GetHistoricalArchiveName(sensor);
 
-            if (await this.blobContainer.Exists(historicalFileName))
+            if (!await this.blobContainer.Exists(historicalFileName))
             {
-                using var historicalBlobFile = await this.blobContainer.DownloadBlob(historicalFileName);
-                var selectedFileName = this.fileNameProvider.GetHistoricalFileName(date);
-                using var selectedFile = this.zipReader.UnzipFile(historicalBlobFile, selectedFileName);
-                if (selectedFile != null)
-                {
-                    return this.readingCsvReader.ReadFile(selectedFile);
-                }
+                return null;
             }
 
-            return null;
+            await using var historicalBlobFile = await this.blobContainer.DownloadBlob(historicalFileName);
+            var selectedFileName = this.fileNameProvider.GetHistoricalFileName(date);
+            await using var selectedFile = this.zipReader.UnzipFile(historicalBlobFile, selectedFileName);
+            return selectedFile != null ? this.readingCsvReader.ReadFile(selectedFile) : null;
         }
     }
 }

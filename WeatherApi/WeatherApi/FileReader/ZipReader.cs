@@ -17,6 +17,7 @@ namespace WeatherApi.FileReader
 
             var memoryStream = new MemoryStream();
             selectedDay.Open().CopyToAsync(memoryStream);
+            memoryStream.Position = 0;
             return memoryStream;
         }
     }
