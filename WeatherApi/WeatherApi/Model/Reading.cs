@@ -1,7 +1,7 @@
-﻿using WeatherApi.FileReader;
-
-namespace WeatherApi.Model
+﻿namespace WeatherApi.Model
 {
+    using WeatherApi.FileReader;
+
     public class Reading : IFromCsv
     {
         public string Time { get; set; }

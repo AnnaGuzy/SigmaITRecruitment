@@ -1,9 +1,7 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Text;
-
-namespace WeatherApi.Model
+﻿namespace WeatherApi.Model
 {
+    using System.Collections.Generic;
+
     public class Measurement
     {
         public List<Reading> Readings { get; set; }

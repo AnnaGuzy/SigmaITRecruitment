@@ -1,8 +1,9 @@
-﻿using System;
-using WeatherApi.FileReader;
-
-namespace WeatherApi.Model
+﻿namespace WeatherApi.Model
 {
+    using System;
+
+    using WeatherApi.FileReader;
+
     public class Sensor : IFromCsv
     {
         public string Name { get; set; }
@@ -17,7 +18,8 @@ namespace WeatherApi.Model
         public bool Equals(string name, string sensorType)
         {
             return string.Equals(this.Name, name, StringComparison.OrdinalIgnoreCase)
-                && (sensorType == null || string.Equals(this.SensorType, sensorType, StringComparison.OrdinalIgnoreCase));
+                   && ((sensorType == null) ||
+                       string.Equals(this.SensorType, sensorType, StringComparison.OrdinalIgnoreCase));
         }
     }
 }

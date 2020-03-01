@@ -1,8 +1,9 @@
-﻿using System;
-using WeatherApi.Model;
-
-namespace WeatherApi.DataAccess
+﻿namespace WeatherApi.DataAccess
 {
+    using System;
+
+    using WeatherApi.Model;
+
     public interface IFileNameProvider
     {
         string GetHistoricalArchiveName(Sensor sensor);

@@ -1,7 +1,7 @@
-﻿using System;
-
-namespace WeatherApi.Settings
+﻿namespace WeatherApi.Settings
 {
+    using System;
+
     public class SettingsProvider : ISettingsProvider
     {
         public string StorageConnectionAppSetting => Environment.GetEnvironmentVariable("StorageConnectionAppSetting");

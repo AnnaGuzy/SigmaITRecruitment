@@ -1,12 +1,12 @@
-﻿using Azure.Storage.Blobs;
-
-using System.IO;
-using System.Threading.Tasks;
-
-using WeatherApi.Settings;
-
-namespace WeatherApi.AzureWrapper
+﻿namespace WeatherApi.AzureWrapper
 {
+    using System.IO;
+    using System.Threading.Tasks;
+
+    using Azure.Storage.Blobs;
+
+    using WeatherApi.Settings;
+
     public class BlobContainerWrapper : IBlobContainerWrapper
     {
         private readonly BlobContainerClient blobContainerClient;

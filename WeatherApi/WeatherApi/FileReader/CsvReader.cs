@@ -1,13 +1,15 @@
-﻿using System.Collections.Generic;
-using System.IO;
-using WeatherApi.Settings;
-
-namespace WeatherApi.FileReader
+﻿namespace WeatherApi.FileReader
 {
+    using System.Collections.Generic;
+    using System.IO;
+
+    using WeatherApi.Settings;
+
     public class CsvReader<T> : ICsvReader<T>
-        where T: IFromCsv, new()
+        where T : IFromCsv, new()
     {
         private readonly string delimiter;
+
         public CsvReader(ISettingsProvider settingsProvider)
         {
             this.delimiter = settingsProvider.CsvDelimiter;

@@ -1,19 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Threading.Tasks;
-using WeatherApi.AzureWrapper;
-using WeatherApi.FileReader;
-using WeatherApi.Model;
-
-namespace WeatherApi.DataAccess
+﻿namespace WeatherApi.DataAccess
 {
+    using System;
+    using System.Collections.Generic;
+    using System.Linq;
+    using System.Threading.Tasks;
+
+    using WeatherApi.AzureWrapper;
+    using WeatherApi.FileReader;
+    using WeatherApi.Model;
+
     public class WeatherDataProvider : IWeatherDataProvider
     {
         private readonly IBlobContainerWrapper blobContainer;
-        private readonly ICsvReader<Sensor> sensorCsvReader;
-        private readonly ICsvReader<Reading> readingCsvReader;
         private readonly IFileNameProvider fileNameProvider;
+        private readonly ICsvReader<Reading> readingCsvReader;
+        private readonly ICsvReader<Sensor> sensorCsvReader;
         private readonly IZipReader zipReader;
 
         public WeatherDataProvider(
@@ -32,7 +33,8 @@ namespace WeatherApi.DataAccess
 
         public async Task<List<Sensor>> GetSensors(string testDevice, string sensorType)
         {
-            await using var metadataFile = await this.blobContainer.DownloadBlob(this.fileNameProvider.GetMetadataFileName());
+            await using var metadataFile =
+                await this.blobContainer.DownloadBlob(this.fileNameProvider.GetMetadataFileName());
             var metadata = this.sensorCsvReader.ReadFile(metadataFile);
             return metadata.Where(x => x.Equals(testDevice, sensorType)).ToList();
         }
@@ -45,7 +47,7 @@ namespace WeatherApi.DataAccess
                 readings = await this.GetReadingsFromHistorical(sensor, date);
             }
 
-            return new Measurement { Readings = readings, Sensor = sensor};
+            return new Measurement { Readings = readings, Sensor = sensor };
         }
 
         private async Task<List<Reading>> TryGetReadingsFromTemporary(Sensor sensor, DateTime date)

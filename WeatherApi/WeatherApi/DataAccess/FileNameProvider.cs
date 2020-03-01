@@ -1,8 +1,9 @@
-﻿using System;
-using WeatherApi.Model;
-
-namespace WeatherApi.DataAccess
+﻿namespace WeatherApi.DataAccess
 {
+    using System;
+
+    using WeatherApi.Model;
+
     public class FileNameProvider : IFileNameProvider
     {
         private const string DateFormat = "yyyy-MM-dd";

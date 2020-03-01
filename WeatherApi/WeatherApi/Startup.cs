@@ -1,15 +1,19 @@
 ﻿using Microsoft.Azure.Functions.Extensions.DependencyInjection;
-using Microsoft.Extensions.DependencyInjection;
 
-using WeatherApi.AzureWrapper;
-using WeatherApi.DataAccess;
-using WeatherApi.FileReader;
-using WeatherApi.Settings;
+using WeatherApi;
 
-[assembly: FunctionsStartup(typeof(WeatherApi.Startup))]
+[assembly: FunctionsStartup(typeof(Startup))]
 
 namespace WeatherApi
 {
+    using Microsoft.Azure.Functions.Extensions.DependencyInjection;
+    using Microsoft.Extensions.DependencyInjection;
+
+    using WeatherApi.AzureWrapper;
+    using WeatherApi.DataAccess;
+    using WeatherApi.FileReader;
+    using WeatherApi.Settings;
+
     public class Startup : FunctionsStartup
     {
         public override void Configure(IFunctionsHostBuilder builder)

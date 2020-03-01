@@ -1,9 +1,9 @@
-﻿using System.IO;
-using System.IO.Compression;
-using System.Linq;
-
-namespace WeatherApi.FileReader
+﻿namespace WeatherApi.FileReader
 {
+    using System.IO;
+    using System.IO.Compression;
+    using System.Linq;
+
     public class ZipReader : IZipReader
     {
         public Stream UnzipFile(Stream archive, string fileName)
