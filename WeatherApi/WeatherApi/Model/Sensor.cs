@@ -18,7 +18,7 @@
         public bool Equals(string name, string sensorType)
         {
             return string.Equals(this.Name, name, StringComparison.OrdinalIgnoreCase)
-                   && ((sensorType == null) ||
+                   && (string.IsNullOrEmpty(sensorType) ||
                        string.Equals(this.SensorType, sensorType, StringComparison.OrdinalIgnoreCase));
         }
     }

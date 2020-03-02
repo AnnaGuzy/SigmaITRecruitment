@@ -8,15 +8,18 @@ namespace WeatherApi.Functions
     using Microsoft.AspNetCore.Mvc;
     using Microsoft.Azure.WebJobs;
     using Microsoft.Azure.WebJobs.Extensions.Http;
+    using Microsoft.Extensions.Logging;
 
     using WeatherApi.DataAccess;
 
     public class WeatherFunction
     {
+        private readonly ILogger<WeatherFunction> logger;
         private readonly IWeatherDataProvider weatherDataProvider;
 
-        public WeatherFunction(IWeatherDataProvider weatherDataProvider)
+        public WeatherFunction(ILogger<WeatherFunction> logger,IWeatherDataProvider weatherDataProvider)
         {
+            this.logger = logger;
             this.weatherDataProvider = weatherDataProvider;
         }
 
@@ -29,6 +32,7 @@ namespace WeatherApi.Functions
             DateTime date,
             string sensorType)
         {
+            this.logger.LogInformation($"Processing request of {testDevice}/{(string.IsNullOrEmpty(sensorType) ? "all types" : sensorType)} at {date.ToShortDateString()}.");
             var sensors = await this.weatherDataProvider.GetSensors(testDevice, sensorType);
             if (sensors.Any() == false)
             {
@@ -44,7 +48,7 @@ namespace WeatherApi.Functions
 
             return measurementsWithReadings.Any()
                 ? (IActionResult) new OkObjectResult(measurementsWithReadings)
-                : new BadRequestObjectResult($"There were no data collected on {date.ToShortDateString()}.");
+                : new NotFoundObjectResult($"There were no data collected on {date.ToShortDateString()}.");
         }
     }
 }
